@@ -1,7 +1,13 @@
+import { randomUUID } from 'node:crypto';
+
 import { AppointmentRepository } from '../repositories/appointment.repository';
 import { PatientRepository } from '../repositories/patient.repository';
 import { UserRepository } from '../repositories/user.repository';
-import { BookAppointmentInput, Appointment } from '../models/appointment.dto';
+import {
+  BookAppointmentInput,
+  UpdateAppointmentInput,
+  Appointment,
+} from '../models/appointment.dto';
 import { NotFoundError, ValidationError } from '../utils/errors';
 
 export class AppointmentService {
@@ -11,37 +17,44 @@ export class AppointmentService {
 
   private userRepository = new UserRepository();
 
-  public async bookAppointment(input: BookAppointmentInput): Promise<Appointment> {
-    // 1. Verify patient exists
-    const patient = await this.patientRepository.findById(input.patientId);
+  public async bookAppointment(
+    input: BookAppointmentInput,
+    createdBy: string,
+  ): Promise<Appointment> {
+    // Verify patient exists
+    const patient = await this.patientRepository.findById(input.patient_id);
     if (!patient) {
-      throw new NotFoundError('Patient', input.patientId);
+      throw new NotFoundError('Patient', input.patient_id);
     }
 
-    // 2. Verify doctor exists and is actually a doctor
-    const doctor = await this.userRepository.findById(input.doctorId);
+    // Verify doctor exists and has doctor role
+    const doctor = await this.userRepository.findById(input.doctor_id);
     if (!doctor) {
-      throw new NotFoundError('Doctor', input.doctorId);
+      throw new NotFoundError('Doctor', input.doctor_id);
     }
     if (doctor.role !== 'doctor') {
       throw new ValidationError(
-        'Cannot book appointment: Selected user is not registered as a doctor',
-        {
-          doctorId: input.doctorId,
-          role: doctor.role,
-        },
+        'Selected user is not registered as a doctor',
+        { doctor_id: input.doctor_id, role: doctor.role },
       );
     }
 
+    const now = new Date().toISOString();
+    const tokenNumber = this.appointmentRepository.nextTokenNumber();
+
     const newAppointment: Appointment = {
-      id: `app_${Math.random().toString(36).substring(2, 11)}`,
-      patientId: input.patientId,
-      doctorId: input.doctorId,
-      scheduledAt: new Date(input.scheduledAt).toISOString(),
-      durationMinutes: input.durationMinutes,
+      id: randomUUID(),
+      patient_id: input.patient_id,
+      doctor_id: input.doctor_id,
+      scheduled_at: new Date(input.scheduled_at).toISOString(),
+      token_number: tokenNumber,
+      status: 'pending',
       reason: input.reason,
-      status: 'scheduled',
-      createdAt: new Date().toISOString(),
+      created_by: createdBy,
+      updated_by: createdBy,
+      created_at: now,
+      updated_at: now,
+      is_deleted: false,
     };
 
     return this.appointmentRepository.create(newAppointment);
@@ -49,5 +62,46 @@ export class AppointmentService {
 
   public async listAppointments(): Promise<Appointment[]> {
     return this.appointmentRepository.findAll();
+  }
+
+  public async getAppointmentById(id: string): Promise<Appointment> {
+    const appointment = await this.appointmentRepository.findById(id);
+    if (!appointment) {
+      throw new NotFoundError('Appointment', id);
+    }
+    return appointment;
+  }
+
+  public async updateAppointment(
+    id: string,
+    input: UpdateAppointmentInput,
+    updatedBy: string,
+  ): Promise<Appointment> {
+    const existing = await this.appointmentRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundError('Appointment', id);
+    }
+
+    const updates: Record<string, unknown> = { updated_by: updatedBy };
+    Object.entries(input).forEach(([key, value]) => {
+      if (value !== undefined) {
+        updates[key] = value;
+      }
+    });
+
+    const updated = await this.appointmentRepository.update(id, updates);
+
+    if (!updated) {
+      throw new NotFoundError('Appointment', id);
+    }
+    return updated;
+  }
+
+  public async cancelAppointment(id: string): Promise<void> {
+    const existing = await this.appointmentRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundError('Appointment', id);
+    }
+    await this.appointmentRepository.softDelete(id);
   }
 }

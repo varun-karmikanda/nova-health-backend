@@ -14,6 +14,21 @@ const options: swaggerJSDoc.Options = {
         description: 'Development Server',
       },
     ],
+    tags: [
+      { name: 'Auth', description: 'Authentication & user management' },
+      { name: 'Patients', description: 'Patient record management' },
+      { name: 'Appointments', description: 'Appointment scheduling & management' },
+    ],
+    components: {
+      securitySchemes: {
+        BearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Enter your bearer token',
+        },
+      },
+    },
   },
   apis: ['./src/routes/**/*.ts', './src/routes/**/*.js'],
 };

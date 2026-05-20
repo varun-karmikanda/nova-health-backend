@@ -1,28 +1,59 @@
 import { z } from 'zod';
 
-export const GenderSchema = z.enum(['male', 'female', 'other']);
-export type Gender = z.infer<typeof GenderSchema>;
+// ─── Constants ───────────────────────────────────────────────────────────────
+export const GENDERS = ['male', 'female', 'other'] as const;
+export type Gender = (typeof GENDERS)[number];
 
+export const BLOOD_GROUPS = [
+  'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-',
+] as const;
+export type BloodGroup = (typeof BLOOD_GROUPS)[number];
+
+// ─── Address ─────────────────────────────────────────────────────────────────
+export const AddressSchema = z.object({
+  street: z.string().min(1, 'Street is required'),
+  city: z.string().min(1, 'City is required'),
+  state: z.string().min(1, 'State is required'),
+  zip_code: z.string().min(1, 'Zip code is required'),
+  country: z.string().min(1, 'Country is required'),
+});
+
+export type Address = z.infer<typeof AddressSchema>;
+
+// ─── Create ──────────────────────────────────────────────────────────────────
 export const CreatePatientSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  first_name: z.string().min(1, 'First name is required').max(25),
+  last_name: z.string().min(1, 'Last name is required').max(25),
   dob: z.string().refine((val) => !Number.isNaN(Date.parse(val)), {
     message: 'Date of birth must be a valid ISO-8601 date string',
   }),
-  gender: GenderSchema,
+  gender: z.enum(GENDERS),
+  blood_group: z.enum(BLOOD_GROUPS),
   phone: z.string().min(5, 'Phone number must be at least 5 characters'),
   email: z.string().email('Invalid email address').optional().nullable(),
+  address: AddressSchema,
 });
 
 export type CreatePatientInput = z.infer<typeof CreatePatientSchema>;
 
+// ─── Update (partial of create) ──────────────────────────────────────────────
+export const UpdatePatientSchema = CreatePatientSchema.partial();
+export type UpdatePatientInput = z.infer<typeof UpdatePatientSchema>;
+
+// ─── Entity ──────────────────────────────────────────────────────────────────
 export interface Patient {
   id: string;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   dob: string;
   gender: Gender;
+  blood_group: BloodGroup;
   phone: string;
-  email?: string | null;
-  createdAt: string;
+  email: string | null;
+  address: Address;
+  is_active: boolean;
+  created_by: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
 }

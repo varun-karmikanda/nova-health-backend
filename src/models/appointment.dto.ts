@@ -1,31 +1,55 @@
 import { z } from 'zod';
 
-export const AppointmentStatusSchema = z.enum(['scheduled', 'completed', 'cancelled', 'no_show']);
-export type AppointmentStatus = z.infer<typeof AppointmentStatusSchema>;
+// ─── Constants ───────────────────────────────────────────────────────────────
+export const APPOINTMENT_STATUSES = [
+  'pending',
+  'confirmed',
+  'arrived',
+  'completed',
+  'cancelled',
+  'no-show',
+] as const;
+export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
 
+// ─── Create ──────────────────────────────────────────────────────────────────
 export const BookAppointmentSchema = z.object({
-  patientId: z.string().min(1, 'Patient ID is required'),
-  doctorId: z.string().min(1, 'Doctor ID is required'),
-  scheduledAt: z.string().refine((val) => !Number.isNaN(Date.parse(val)), {
-    message: 'Scheduled date must be a valid ISO-8601 date string',
-  }),
-  durationMinutes: z
-    .number()
-    .int()
-    .min(5, 'Duration must be at least 5 minutes')
-    .max(240, 'Duration cannot exceed 4 hours'),
+  patient_id: z.string().uuid('Patient ID must be a valid UUID'),
+  doctor_id: z.string().uuid('Doctor ID must be a valid UUID'),
+  scheduled_at: z.string().refine(
+    (val) => !Number.isNaN(Date.parse(val)),
+    { message: 'Scheduled date must be a valid ISO-8601 date string' },
+  ),
   reason: z.string().min(3, 'Reason must be at least 3 characters'),
 });
 
 export type BookAppointmentInput = z.infer<typeof BookAppointmentSchema>;
 
+// ─── Update ──────────────────────────────────────────────────────────────────
+export const UpdateAppointmentSchema = z.object({
+  status: z.enum(APPOINTMENT_STATUSES).optional(),
+  scheduled_at: z
+    .string()
+    .refine((val) => !Number.isNaN(Date.parse(val)), {
+      message: 'Scheduled date must be a valid ISO-8601 date string',
+    })
+    .optional(),
+  reason: z.string().min(3).optional(),
+});
+
+export type UpdateAppointmentInput = z.infer<typeof UpdateAppointmentSchema>;
+
+// ─── Entity ──────────────────────────────────────────────────────────────────
 export interface Appointment {
   id: string;
-  patientId: string;
-  doctorId: string;
-  scheduledAt: string;
-  durationMinutes: number;
-  reason: string;
+  patient_id: string;
+  doctor_id: string;
+  scheduled_at: string;
+  token_number: number;
   status: AppointmentStatus;
-  createdAt: string;
+  reason: string;
+  created_by: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+  is_deleted: boolean;
 }
