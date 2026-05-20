@@ -10,8 +10,9 @@ const appointmentController = new AppointmentController();
  * @openapi
  * /appointments:
  *   post:
+ *     tags: [Appointments]
  *     summary: Book a new appointment
- *     description: Schedules a patient appointment with a specific doctor. Authorized for admin and receptionist roles only.
+ *     description: Schedules a patient appointment. Roles — admin, receptionist.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -21,70 +22,33 @@ const appointmentController = new AppointmentController();
  *           schema:
  *             type: object
  *             required:
- *               - patientId
- *               - doctorId
- *               - scheduledAt
- *               - durationMinutes
+ *               - patient_id
+ *               - doctor_id
+ *               - scheduled_at
  *               - reason
  *             properties:
- *               patientId:
+ *               patient_id:
  *                 type: string
- *                 example: pat_1a2b3c
- *               doctorId:
+ *                 format: uuid
+ *                 example: 123e4567-e89b-12d3-a456-426614174000
+ *               doctor_id:
  *                 type: string
- *                 example: doc_4d5e6f
- *               scheduledAt:
+ *                 format: uuid
+ *                 example: 987fcdeb-51a2-3e4d-b567-890123456789
+ *               scheduled_at:
  *                 type: string
  *                 format: date-time
  *                 example: "2026-06-01T10:00:00.000Z"
- *               durationMinutes:
- *                 type: integer
- *                 example: 30
  *               reason:
  *                 type: string
  *                 example: Annual physical examination
  *     responses:
  *       201:
  *         description: Appointment booked successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                       example: app_7g8h9i
- *                     patientId:
- *                       type: string
- *                       example: pat_1a2b3c
- *                     doctorId:
- *                       type: string
- *                       example: doc_4d5e6f
- *                     scheduledAt:
- *                       type: string
- *                       format: date-time
- *                     durationMinutes:
- *                       type: integer
- *                     reason:
- *                       type: string
- *                     status:
- *                       type: string
- *                       example: scheduled
- *                     createdAt:
- *                       type: string
- *                       format: date-time
- *       400:
- *         description: Bad request / Patient or Doctor validation errors
  *       401:
  *         description: Unauthenticated
  *       403:
- *         description: Forbidden (only admin and receptionist are allowed)
+ *         description: Forbidden
  *       404:
  *         description: Patient or Doctor not found
  *       422:
@@ -101,43 +65,14 @@ appointmentRouter.post(
  * @openapi
  * /appointments:
  *   get:
- *     summary: Retrieve list of scheduled appointments
- *     description: Returns all appointments registered in the system. Authorized for admin, doctor, and receptionist roles only.
+ *     tags: [Appointments]
+ *     summary: Get all appointments
+ *     description: Returns list of active appointments. Roles — admin, doctor, receptionist.
  *     security:
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Appointments successfully retrieved
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                         example: app_7g8h9i
- *                       patientId:
- *                         type: string
- *                       doctorId:
- *                         type: string
- *                       scheduledAt:
- *                         type: string
- *                       durationMinutes:
- *                         type: integer
- *                       reason:
- *                         type: string
- *                       status:
- *                         type: string
- *                       createdAt:
- *                         type: string
+ *         description: Appointments fetched successfully
  *       401:
  *         description: Unauthenticated
  *       403:
@@ -148,6 +83,121 @@ appointmentRouter.get(
   authMiddleware,
   requireRole(['admin', 'doctor', 'receptionist']),
   appointmentController.list,
+);
+
+/**
+ * @openapi
+ * /appointments/{id}:
+ *   get:
+ *     tags: [Appointments]
+ *     summary: Get appointment by ID
+ *     description: Returns a single appointment. Roles — admin, doctor, receptionist.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Appointment fetched successfully
+ *       401:
+ *         description: Unauthenticated
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Appointment not found
+ */
+appointmentRouter.get(
+  '/:id',
+  authMiddleware,
+  requireRole(['admin', 'doctor', 'receptionist']),
+  appointmentController.getById,
+);
+
+/**
+ * @openapi
+ * /appointments/{id}:
+ *   patch:
+ *     tags: [Appointments]
+ *     summary: Update appointment status or details
+ *     description: Updates appointment fields (status, scheduled_at, reason). Roles — admin, receptionist.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, confirmed, arrived, completed, cancelled, no-show]
+ *                 example: confirmed
+ *               scheduled_at:
+ *                 type: string
+ *                 format: date-time
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Appointment updated successfully
+ *       401:
+ *         description: Unauthenticated
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Appointment not found
+ */
+appointmentRouter.patch(
+  '/:id',
+  authMiddleware,
+  requireRole(['admin', 'receptionist']),
+  appointmentController.update,
+);
+
+/**
+ * @openapi
+ * /appointments/{id}:
+ *   delete:
+ *     tags: [Appointments]
+ *     summary: Cancel / delete an appointment
+ *     description: Soft-deletes an appointment. Roles — admin only.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Appointment cancelled successfully
+ *       401:
+ *         description: Unauthenticated
+ *       403:
+ *         description: Forbidden (only admin)
+ *       404:
+ *         description: Appointment not found
+ */
+appointmentRouter.delete(
+  '/:id',
+  authMiddleware,
+  requireRole(['admin']),
+  appointmentController.remove,
 );
 
 export { appointmentRouter };

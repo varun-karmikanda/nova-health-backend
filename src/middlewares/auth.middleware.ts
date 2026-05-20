@@ -19,10 +19,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
 
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Authentication required',
-      },
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
     });
     return;
   }
@@ -30,36 +27,31 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   const token = authHeader.split(' ')[1];
   if (!token) {
     res.status(401).json({
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Authentication token missing',
-      },
+      error: { code: 'UNAUTHORIZED', message: 'Authentication token missing' },
     });
     return;
   }
 
   try {
-    const decodedPayload = Buffer.from(token, 'base64').toString('utf-8');
-    const payload = JSON.parse(decodedPayload) as { id: string; email: string; role: UserRole };
+    const decoded = Buffer.from(token, 'base64').toString('utf-8');
+    const payload = JSON.parse(decoded) as {
+      id: string;
+      email: string;
+      role: UserRole;
+    };
 
     if (!payload.id || !payload.email || !payload.role) {
       res.status(401).json({
-        error: {
-          code: 'UNAUTHORIZED',
-          message: 'Invalid authentication token structure',
-        },
+        error: { code: 'UNAUTHORIZED', message: 'Invalid authentication token structure' },
       });
       return;
     }
 
     req.user = payload;
     next();
-  } catch (err) {
+  } catch (_err) {
     res.status(401).json({
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Invalid authentication token',
-      },
+      error: { code: 'UNAUTHORIZED', message: 'Invalid authentication token' },
     });
   }
 }
@@ -68,20 +60,14 @@ export function requireRole(allowedRoles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({
-        error: {
-          code: 'UNAUTHORIZED',
-          message: 'Authentication required',
-        },
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
       });
       return;
     }
 
     if (!allowedRoles.includes(req.user.role)) {
       res.status(403).json({
-        error: {
-          code: 'FORBIDDEN',
-          message: 'You do not have permission to access this resource',
-        },
+        error: { code: 'FORBIDDEN', message: 'You do not have permission to access this resource' },
       });
       return;
     }
