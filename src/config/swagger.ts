@@ -18,6 +18,10 @@ const options: swaggerJSDoc.Options = {
       { name: 'Auth', description: 'Authentication & user management' },
       { name: 'Patients', description: 'Patient record management' },
       { name: 'Appointments', description: 'Appointment scheduling & management' },
+      { name: 'Encounters', description: 'Patient encounters & visits' },
+      { name: 'Prescriptions', description: 'Medical prescriptions' },
+      { name: 'Invoices', description: 'Billing and invoices' },
+      { name: 'Audit', description: 'System audit logs' },
     ],
     components: {
       securitySchemes: {

@@ -8,8 +8,12 @@ import {
 } from '../models/patient.dto';
 import { NotFoundError } from '../utils/errors';
 
+import { AuditService } from './audit.service';
+
 export class PatientService {
   private patientRepository = new PatientRepository();
+
+  private auditService = new AuditService();
 
   public async createPatient(
     input: CreatePatientInput,
@@ -34,7 +38,19 @@ export class PatientService {
       updated_at: now,
     };
 
-    return this.patientRepository.create(newPatient);
+    const created = await this.patientRepository.create(newPatient);
+
+    await this.auditService.logAction(
+      'CREATE',
+      'Patient',
+      created.id,
+      createdBy !== 'system' ? undefined : undefined, // We don't have user id here easily, but let's pass undefined
+      undefined,
+      null,
+      created as unknown as Record<string, unknown>,
+    );
+
+    return created;
   }
 
   public async getPatientById(id: string): Promise<Patient> {
@@ -71,6 +87,18 @@ export class PatientService {
     if (!updated) {
       throw new NotFoundError('Patient', id);
     }
+
+    await this.auditService.logAction(
+      'UPDATE',
+      'Patient',
+      id,
+      undefined,
+      undefined,
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      updates,
+    );
+
     return updated;
   }
 
@@ -80,5 +108,15 @@ export class PatientService {
       throw new NotFoundError('Patient', id);
     }
     await this.patientRepository.softDelete(id);
+
+    await this.auditService.logAction(
+      'DELETE',
+      'Patient',
+      id,
+      undefined,
+      undefined,
+      existing as unknown as Record<string, unknown>,
+      null,
+    );
   }
 }

@@ -10,8 +10,12 @@ import {
 } from '../models/appointment.dto';
 import { NotFoundError, ValidationError } from '../utils/errors';
 
+import { AuditService } from './audit.service';
+
 export class AppointmentService {
   private appointmentRepository = new AppointmentRepository();
+
+  private auditService = new AuditService();
 
   private patientRepository = new PatientRepository();
 
@@ -57,7 +61,19 @@ export class AppointmentService {
       is_deleted: false,
     };
 
-    return this.appointmentRepository.create(newAppointment);
+    const created = await this.appointmentRepository.create(newAppointment);
+
+    await this.auditService.logAction(
+      'CREATE',
+      'Appointment',
+      created.id,
+      createdBy !== 'system' ? undefined : undefined,
+      undefined,
+      null,
+      created as unknown as Record<string, unknown>,
+    );
+
+    return created;
   }
 
   public async listAppointments(): Promise<Appointment[]> {
@@ -94,6 +110,18 @@ export class AppointmentService {
     if (!updated) {
       throw new NotFoundError('Appointment', id);
     }
+
+    await this.auditService.logAction(
+      'UPDATE',
+      'Appointment',
+      id,
+      undefined,
+      undefined,
+      existing as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      updates,
+    );
+
     return updated;
   }
 
@@ -103,5 +131,15 @@ export class AppointmentService {
       throw new NotFoundError('Appointment', id);
     }
     await this.appointmentRepository.softDelete(id);
+
+    await this.auditService.logAction(
+      'DELETE',
+      'Appointment',
+      id,
+      undefined,
+      undefined,
+      existing as unknown as Record<string, unknown>,
+      null,
+    );
   }
 }
