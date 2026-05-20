@@ -9,8 +9,12 @@ import {
 } from '../models/auth.dto';
 import { ConflictError, UnauthorizedError, NotFoundError } from '../utils/errors';
 
+import { AuditService } from './audit.service';
+
 export class AuthService {
   private userRepository = new UserRepository();
+
+  private auditService = new AuditService();
 
   public async register(input: CreateUserInput): Promise<User> {
     const existing = await this.userRepository.findByEmail(input.email);
@@ -35,6 +39,16 @@ export class AuthService {
       updated_at: now,
     });
 
+    await this.auditService.logAction(
+      'CREATE',
+      'User',
+      newUser.id,
+      newUser.id,
+      undefined,
+      null,
+      newUser as unknown as Record<string, unknown>,
+    );
+
     return newUser;
   }
 
@@ -56,6 +70,13 @@ export class AuthService {
 
     const tokenPayload = { id: user.id, email: user.email, role: user.role };
     const accessToken = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+
+    await this.auditService.logAction(
+      'LOGIN',
+      'User',
+      user.id,
+      user.id,
+    );
 
     return {
       accessToken,

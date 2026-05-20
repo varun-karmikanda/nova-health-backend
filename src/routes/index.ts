@@ -3,6 +3,10 @@ import { Router, Request, Response } from 'express';
 import { authRouter } from './auth.routes';
 import { patientRouter } from './patient.routes';
 import { appointmentRouter } from './appointment.routes';
+import { auditRouter } from './audit.routes';
+import { encounterRouter } from './encounter.routes';
+import { prescriptionRouter } from './prescription.routes';
+import { invoiceRouter } from './invoice.routes';
 
 const apiRouter = Router();
 
@@ -43,5 +47,9 @@ apiRouter.get('/health', (req: Request, res: Response) => {
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/patients', patientRouter);
 apiRouter.use('/appointments', appointmentRouter);
+apiRouter.use('/audit', auditRouter);
+apiRouter.use('/encounters', encounterRouter);
+apiRouter.use('/prescriptions', prescriptionRouter);
+apiRouter.use('/invoices', invoiceRouter);
 
 export { apiRouter };
