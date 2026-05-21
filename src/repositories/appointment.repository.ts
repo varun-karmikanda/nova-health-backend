@@ -1,70 +1,63 @@
+import { AppointmentModel } from '../models/appointment.schema';
 import { Appointment } from '../models/appointment.dto';
 
 export class AppointmentRepository {
-  private static appointments: Appointment[] = [];
-
-  private static tokenCounter = 0;
-
-  public create(appointment: Appointment): Promise<Appointment> {
-    AppointmentRepository.appointments.push(appointment);
-    return Promise.resolve(appointment);
+  public async create(appointment: Appointment): Promise<Appointment> {
+    const created = await AppointmentModel.create({
+      _id: appointment.id,
+      ...appointment,
+    } as any);
+    const { _id, ...rest } = created.toObject();
+    return { id: _id, ...rest } as any;
   }
 
-  public findAll(): Promise<Appointment[]> {
-    return Promise.resolve(
-      AppointmentRepository.appointments.filter((a) => !a.is_deleted),
-    );
+  public async findAll(): Promise<Appointment[]> {
+    const appointments = await AppointmentModel.find({ is_deleted: false }).lean();
+    return appointments.map((a) => {
+      const { _id, ...rest } = a;
+      return { id: _id, ...rest } as any;
+    });
   }
 
-  public findById(id: string): Promise<Appointment | null> {
-    const appointment = AppointmentRepository.appointments.find(
-      (a) => a.id === id && !a.is_deleted,
-    );
-    return Promise.resolve(appointment ?? null);
+  public async findById(id: string): Promise<Appointment | null> {
+    const appointment = await AppointmentModel.findOne({ _id: id, is_deleted: false }).lean();
+    if (!appointment) return null;
+    const { _id, ...rest } = appointment;
+    return { id: _id, ...rest } as any;
   }
 
-  public findByPatientId(patientId: string): Promise<Appointment[]> {
-    return Promise.resolve(
-      AppointmentRepository.appointments.filter(
-        (a) => a.patient_id === patientId && !a.is_deleted,
-      ),
-    );
+  public async findByPatientId(patientId: string): Promise<Appointment[]> {
+    const appointments = await AppointmentModel.find({ patient_id: patientId, is_deleted: false }).lean();
+    return appointments.map((a) => {
+      const { _id, ...rest } = a;
+      return { id: _id, ...rest } as any;
+    });
   }
 
-  public update(
+  public async update(
     id: string,
     updates: Record<string, unknown>,
   ): Promise<Appointment | null> {
-    const index = AppointmentRepository.appointments.findIndex(
-      (a) => a.id === id,
-    );
-    if (index === -1) return Promise.resolve(null);
-
-    const current = AppointmentRepository.appointments[index];
-    if (!current) return Promise.resolve(null);
-
-    Object.assign(current, updates, { updated_at: new Date().toISOString() });
-    return Promise.resolve(current);
+    const updated = await AppointmentModel.findOneAndUpdate(
+      { _id: id },
+      { ...updates, updated_at: new Date().toISOString() },
+      { new: true },
+    ).lean();
+    if (!updated) return null;
+    const { _id, ...rest } = updated;
+    return { id: _id, ...rest } as any;
   }
 
-  public softDelete(id: string): Promise<boolean> {
-    const index = AppointmentRepository.appointments.findIndex(
-      (a) => a.id === id,
+  public async softDelete(id: string): Promise<boolean> {
+    const result = await AppointmentModel.updateOne(
+      { _id: id },
+      { is_deleted: true, updated_at: new Date().toISOString() },
     );
-    if (index === -1) return Promise.resolve(false);
-
-    const current = AppointmentRepository.appointments[index];
-    if (!current) return Promise.resolve(false);
-
-    Object.assign(current, {
-      is_deleted: true,
-      updated_at: new Date().toISOString(),
-    });
-    return Promise.resolve(true);
+    return result.modifiedCount > 0;
   }
 
-  public nextTokenNumber(): number {
-    AppointmentRepository.tokenCounter += 1;
-    return AppointmentRepository.tokenCounter;
+  public async nextTokenNumber(): Promise<number> {
+    const count = await AppointmentModel.countDocuments();
+    return count + 1;
   }
 }
