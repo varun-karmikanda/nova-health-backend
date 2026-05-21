@@ -1,5 +1,6 @@
 import { Schema, model } from 'mongoose';
-import { UserRole } from '../models/auth.dto';
+
+import { UserRole } from './auth.dto';
 
 export interface UserDoc {
   _id: string;
@@ -11,6 +12,7 @@ export interface UserDoc {
   role: UserRole;
   salary: number;
   password_hash: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -30,10 +32,11 @@ const UserSchema = new Schema<UserDoc>(
     },
     salary: { type: Number, required: true },
     password_hash: { type: String, required: true },
+    is_active: { type: Boolean, required: true, default: true },
     created_at: { type: String, required: true },
     updated_at: { type: String, required: true },
   },
-  { collection: 'users', _id: false }
+  { collection: 'users', _id: false },
 );
 
 export const UserModel = model<UserDoc>('User', UserSchema);

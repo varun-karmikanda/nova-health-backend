@@ -9,7 +9,8 @@ export class AuthController {
   public register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const validated = CreateUserSchema.parse(req.body);
-      const user = await this.authService.register(validated);
+      const operatorId = req.user?.id;
+      const user = await this.authService.register(validated, operatorId);
       res.status(201).json({
         success: true,
         data: user,
@@ -45,6 +46,58 @@ export class AuthController {
       res.status(200).json({
         success: true,
         data: user,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public listDoctors = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const doctors = await this.authService.getDoctors();
+      res.status(200).json({
+        success: true,
+        data: doctors,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public listUsers = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const users = await this.authService.getAllUsers();
+      res.status(200).json({
+        success: true,
+        data: users,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const operatorId = req.user?.id;
+      if (!operatorId) {
+        res.status(401).json({
+          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        });
+        return;
+      }
+
+      if (id === operatorId) {
+        res.status(400).json({
+          error: { code: 'BAD_REQUEST', message: 'Cannot deactivate your own administrator account' },
+        });
+        return;
+      }
+
+      await this.authService.removeUser(id as string, operatorId);
+      res.status(200).json({
+        success: true,
+        message: 'User deactivated successfully',
       });
     } catch (err) {
       next(err);

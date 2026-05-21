@@ -16,7 +16,7 @@ export class AuthService {
 
   private auditService = new AuditService();
 
-  public async register(input: CreateUserInput): Promise<User> {
+  public async register(input: CreateUserInput, operatorId?: string): Promise<User> {
     const existing = await this.userRepository.findByEmail(input.email);
     if (existing) {
       throw new ConflictError('User', `email '${input.email}'`);
@@ -43,7 +43,7 @@ export class AuthService {
       'CREATE',
       'User',
       newUser.id,
-      newUser.id,
+      operatorId ?? newUser.id,
       undefined,
       null,
       newUser as unknown as Record<string, unknown>,
@@ -55,11 +55,6 @@ export class AuthService {
   public async login(input: SignInInput): Promise<SignInResponse> {
     const user = await this.userRepository.findByEmail(input.email);
     if (!user) {
-      throw new UnauthorizedError('Invalid credentials');
-    }
-
-    // Verify role matches
-    if (user.role !== input.role) {
       throw new UnauthorizedError('Invalid credentials');
     }
 
@@ -90,5 +85,32 @@ export class AuthService {
       throw new NotFoundError('User', id);
     }
     return user;
+  }
+
+  public async getDoctors(): Promise<User[]> {
+    return this.userRepository.findDoctors();
+  }
+
+  public async getAllUsers(): Promise<User[]> {
+    return this.userRepository.findAll();
+  }
+
+  public async removeUser(id: string, operatorId: string): Promise<void> {
+    const existing = await this.userRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundError('User', id);
+    }
+
+    await this.userRepository.softDelete(id);
+
+    await this.auditService.logAction(
+      'DELETE',
+      'User',
+      id,
+      operatorId,
+      undefined,
+      existing as unknown as Record<string, unknown>,
+      null,
+    );
   }
 }
