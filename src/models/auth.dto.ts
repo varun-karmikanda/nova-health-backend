@@ -27,7 +27,6 @@ export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export const SignInSchema = z.object({
   email: z.string().email('Please provide a valid email id'),
   password: z.string().min(6, 'Password must be at least 6 characters long'),
-  role: UserRoleSchema,
 });
 
 export type SignInInput = z.infer<typeof SignInSchema>;
@@ -42,6 +41,7 @@ export interface User {
   phone: string;
   role: UserRole;
   salary: number;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
 }

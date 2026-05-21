@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { AuthController } from '../controllers/auth.controller';
-import { authMiddleware } from '../middlewares/auth.middleware';
+import { authMiddleware, requireRole } from '../middlewares/auth.middleware';
 
 const authRouter = Router();
 const authController = new AuthController();
@@ -12,7 +12,9 @@ const authController = new AuthController();
  *   post:
  *     tags: [Auth]
  *     summary: Register a new system user
- *     description: Creates a new user with the specified role.
+ *     description: Creates a new user with the specified role. Restricted to administrators.
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -60,12 +62,16 @@ const authController = new AuthController();
  *     responses:
  *       201:
  *         description: User registered successfully
+ *       401:
+ *         description: Unauthenticated
+ *       403:
+ *         description: Forbidden (Admin role required)
  *       409:
  *         description: User already exists
  *       422:
  *         description: Validation error
  */
-authRouter.post('/register', authController.register);
+authRouter.post('/register', authMiddleware, requireRole(['admin']), authController.register);
 
 /**
  * @openapi
@@ -73,7 +79,7 @@ authRouter.post('/register', authController.register);
  *   post:
  *     tags: [Auth]
  *     summary: Sign in a user
- *     description: Authenticates user by email, password, and role.
+ *     description: Authenticates user by email and password.
  *     requestBody:
  *       required: true
  *       content:
@@ -83,7 +89,6 @@ authRouter.post('/register', authController.register);
  *             required:
  *               - email
  *               - password
- *               - role
  *             properties:
  *               email:
  *                 type: string
@@ -93,10 +98,6 @@ authRouter.post('/register', authController.register);
  *                 type: string
  *                 format: password
  *                 example: securePass123
- *               role:
- *                 type: string
- *                 enum: [admin, doctor, receptionist, lab_technician]
- *                 example: receptionist
  *     responses:
  *       200:
  *         description: Authentication successful
@@ -134,5 +135,55 @@ authRouter.post('/login', authController.login);
  *         description: Unauthenticated
  */
 authRouter.get('/me', authMiddleware, authController.me);
+authRouter.get('/doctors', authMiddleware, authController.listDoctors);
+
+/**
+ * @openapi
+ * /auth/users:
+ *   get:
+ *     tags: [Auth]
+ *     summary: List all system users / staff members
+ *     description: Returns a list of all active system users. Restricted to administrators.
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of users retrieved successfully
+ *       401:
+ *         description: Unauthenticated
+ *       403:
+ *         description: Forbidden (Admin role required)
+ */
+authRouter.get('/users', authMiddleware, requireRole(['admin']), authController.listUsers);
+
+/**
+ * @openapi
+ * /auth/users/{id}:
+ *   delete:
+ *     tags: [Auth]
+ *     summary: Soft-delete/deactivate a system user
+ *     description: Deactivates a system user by marking them as inactive. Restricted to administrators. Cannot delete self.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user ID to deactivate
+ *     responses:
+ *       200:
+ *         description: User deactivated successfully
+ *       400:
+ *         description: Bad request (e.g. attempting to delete self)
+ *       401:
+ *         description: Unauthenticated
+ *       403:
+ *         description: Forbidden (Admin role required)
+ *       404:
+ *         description: User not found
+ */
+authRouter.delete('/users/:id', authMiddleware, requireRole(['admin']), authController.deleteUser);
 
 export { authRouter };
