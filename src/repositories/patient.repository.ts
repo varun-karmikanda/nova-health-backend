@@ -2,6 +2,23 @@ import { PatientModel } from '../models/patient.schema';
 import { Patient } from '../models/patient.dto';
 
 export class PatientRepository {
+  public async findByNameAndPhone(
+    firstName: string,
+    lastName: string,
+    phone: string,
+  ): Promise<Patient | null> {
+    const escapeRegex = (str: string) => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const patient = await PatientModel.findOne({
+      first_name: { $regex: new RegExp(`^${escapeRegex(firstName.trim())}$`, 'i') },
+      last_name: { $regex: new RegExp(`^${escapeRegex(lastName.trim())}$`, 'i') },
+      phone: phone.trim(),
+      is_active: true,
+    }).lean();
+    if (!patient) return null;
+    const { _id, ...rest } = patient;
+    return { id: _id, ...rest } as any;
+  }
+
   public async create(patient: Patient): Promise<Patient> {
     const created = await PatientModel.create({
       _id: patient.id,
