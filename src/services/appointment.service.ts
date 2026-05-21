@@ -44,7 +44,7 @@ export class AppointmentService {
     }
 
     const now = new Date().toISOString();
-    const tokenNumber = this.appointmentRepository.nextTokenNumber();
+    const tokenNumber = await this.appointmentRepository.nextTokenNumber();
 
     const newAppointment: Appointment = {
       id: randomUUID(),

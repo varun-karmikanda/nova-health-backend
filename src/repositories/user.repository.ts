@@ -1,25 +1,30 @@
+import { UserModel } from '../models/user.schema';
 import { User } from '../models/auth.dto';
 
 export class UserRepository {
-  private static users: Array<User & { password_hash: string }> = [];
-
-  public findByEmail(email: string): Promise<(User & { password_hash: string }) | null> {
-    const user = UserRepository.users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase(),
-    );
-    return Promise.resolve(user ?? null);
+  // Find a user by email (including password hash)
+  public async findByEmail(email: string): Promise<(User & { password_hash: string }) | null> {
+    const user = await UserModel.findOne({ email: email.toLowerCase() }).lean();
+    if (!user) return null;
+    const { _id, ...rest } = user;
+    return { id: _id, ...rest } as any;
   }
 
-  public findById(id: string): Promise<User | null> {
-    const record = UserRepository.users.find((u) => u.id === id);
-    if (!record) return Promise.resolve(null);
-    const { password_hash: _, ...user } = record;
-    return Promise.resolve(user);
+  // Find a user by ID (excluding password hash)
+  public async findById(id: string): Promise<User | null> {
+    const user = await UserModel.findById(id).select('-password_hash -__v').lean();
+    if (!user) return null;
+    const { _id, ...rest } = user;
+    return { id: _id, ...rest } as any;
   }
 
-  public create(user: User & { password_hash: string }): Promise<User> {
-    UserRepository.users.push(user);
-    const { password_hash: _, ...created } = user;
-    return Promise.resolve(created);
+  // Create a new user (expects password_hash field already set)
+  public async create(user: User & { password_hash: string }): Promise<User> {
+    const created = await UserModel.create({
+      _id: user.id,
+      ...user,
+    } as any);
+    const { _id, password_hash, ...rest } = created.toObject();
+    return { id: _id, ...rest } as any;
   }
 }

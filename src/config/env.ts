@@ -7,7 +7,8 @@ dotenv.config();
 const envSchema = z.object({
   PORT: z.coerce.number().default(5000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  MONGO_URI: z.string().url().optional(),
+  LOG_LEVEL: z.string().default('info'),
 });
 
 const parsed = envSchema.safeParse(process.env);
