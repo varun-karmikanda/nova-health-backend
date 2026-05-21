@@ -20,11 +20,11 @@ export interface PatientDoc {
 
 const AddressSchema = new Schema<Address>(
   {
-    street: { type: String, required: true },
-    city: { type: String, required: true },
-    state: { type: String, required: true },
-    zip_code: { type: String, required: true },
-    country: { type: String, required: true },
+    street: { type: String, default: '' },
+    city: { type: String, default: '' },
+    state: { type: String, default: '' },
+    zip_code: { type: String, default: '' },
+    country: { type: String, default: '' },
   },
   { _id: false }
 );
@@ -39,7 +39,7 @@ const PatientSchema = new Schema<PatientDoc>(
     blood_group: { type: String, required: true },
     phone: { type: String, required: true },
     email: { type: String, default: null },
-    address: { type: AddressSchema, required: true },
+    address: { type: AddressSchema, default: {} },
     is_active: { type: Boolean, default: true },
     created_by: { type: String, required: true },
     updated_by: { type: String, required: true },

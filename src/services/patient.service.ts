@@ -6,7 +6,7 @@ import {
   UpdatePatientInput,
   Patient,
 } from '../models/patient.dto';
-import { NotFoundError } from '../utils/errors';
+import { NotFoundError, ConflictError } from '../utils/errors';
 
 import { AuditService } from './audit.service';
 
@@ -19,6 +19,18 @@ export class PatientService {
     input: CreatePatientInput,
     createdBy: string,
   ): Promise<Patient> {
+    const existing = await this.patientRepository.findByNameAndPhone(
+      input.first_name,
+      input.last_name,
+      input.phone,
+    );
+    if (existing) {
+      throw new ConflictError(
+        'Patient',
+        'with this first name, last name, and phone number already exists',
+      );
+    }
+
     const now = new Date().toISOString();
 
     const newPatient: Patient = {
@@ -30,7 +42,7 @@ export class PatientService {
       blood_group: input.blood_group,
       phone: input.phone,
       email: input.email ?? null,
-      address: input.address,
+      address: input.address ?? {},
       is_active: true,
       created_by: createdBy,
       updated_by: createdBy,
@@ -73,6 +85,28 @@ export class PatientService {
     const existing = await this.patientRepository.findById(id);
     if (!existing) {
       throw new NotFoundError('Patient', id);
+    }
+
+    const updatedFirstName = input.first_name !== undefined ? input.first_name : existing.first_name;
+    const updatedLastName = input.last_name !== undefined ? input.last_name : existing.last_name;
+    const updatedPhone = input.phone !== undefined ? input.phone : existing.phone;
+
+    if (
+      input.first_name !== undefined ||
+      input.last_name !== undefined ||
+      input.phone !== undefined
+    ) {
+      const duplicate = await this.patientRepository.findByNameAndPhone(
+        updatedFirstName,
+        updatedLastName,
+        updatedPhone,
+      );
+      if (duplicate && duplicate.id !== id) {
+        throw new ConflictError(
+          'Patient',
+          'another patient with this first name, last name, and phone number already exists',
+        );
+      }
     }
 
     const updates: Record<string, unknown> = { updated_by: updatedBy };

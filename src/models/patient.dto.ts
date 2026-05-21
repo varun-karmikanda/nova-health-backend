@@ -11,11 +11,11 @@ export type BloodGroup = (typeof BLOOD_GROUPS)[number];
 
 // ─── Address ─────────────────────────────────────────────────────────────────
 export const AddressSchema = z.object({
-  street: z.string().min(1, 'Street is required'),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
-  zip_code: z.string().min(1, 'Zip code is required'),
-  country: z.string().min(1, 'Country is required'),
+  street: z.string().optional().nullable().or(z.literal('')),
+  city: z.string().optional().nullable().or(z.literal('')),
+  state: z.string().optional().nullable().or(z.literal('')),
+  zip_code: z.string().optional().nullable().or(z.literal('')),
+  country: z.string().optional().nullable().or(z.literal('')),
 });
 
 export type Address = z.infer<typeof AddressSchema>;
@@ -29,9 +29,9 @@ export const CreatePatientSchema = z.object({
   }),
   gender: z.enum(GENDERS),
   blood_group: z.enum(BLOOD_GROUPS),
-  phone: z.string().min(5, 'Phone number must be at least 5 characters'),
-  email: z.string().email('Invalid email address').optional().nullable(),
-  address: AddressSchema,
+  phone: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
+  email: z.string().email('Invalid email address').optional().nullable().or(z.literal('')),
+  address: AddressSchema.optional().nullable(),
 });
 
 export type CreatePatientInput = z.infer<typeof CreatePatientSchema>;
