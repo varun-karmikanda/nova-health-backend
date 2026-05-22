@@ -9,7 +9,7 @@ export const CreateEncounterSchema = z.object({
     message: 'Encounter date must be a valid ISO-8601 date string',
   }),
   symptoms: z.string().min(1, 'Symptoms are required'),
-  vitals: z.record(z.unknown()).optional(),
+  vitals: z.record(z.unknown()).nullable().optional(),
   diagnoses: z.array(z.string()).optional(),
   treatment_plan: z.string().optional(),
   notes: z.string().optional(),

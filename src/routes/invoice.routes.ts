@@ -86,7 +86,7 @@ invoiceRouter.post(
 invoiceRouter.get(
   '/',
   authMiddleware,
-  requireRole(['admin', 'receptionist']),
+  requireRole(['admin', 'doctor', 'receptionist']),
   invoiceController.list,
 );
 
@@ -119,7 +119,7 @@ invoiceRouter.get(
 invoiceRouter.get(
   '/:id',
   authMiddleware,
-  requireRole(['admin', 'receptionist']),
+  requireRole(['admin', 'doctor', 'receptionist']),
   invoiceController.getById,
 );
 

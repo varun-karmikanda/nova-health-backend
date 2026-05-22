@@ -21,7 +21,7 @@ const rawUsers = [
     phone: '0000000000',
     role: 'admin',
     salary: 0,
-    password_hash: 'hash_ChangeMe123!',
+    password_hash: 'hash_varun123!',
     created_at: '2026-05-21T01:59:02.670Z',
     updated_at: '2026-05-21T01:59:02.670Z',
     is_active: true,
