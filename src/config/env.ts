@@ -9,7 +9,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   MONGO_URI: z.string().url().optional(),
   LOG_LEVEL: z.string().default('info'),
-  JWT_SECRET: z.string().default('super_secret_jwt_key_change_me_in_production'),
+  JWT_SECRET: z.string().default('/bY2RF+WaQdgh*;-}Z9j8sM6::,tDGm>FN-r&Umeq@.'),
 });
 
 const parsed = envSchema.safeParse(process.env);

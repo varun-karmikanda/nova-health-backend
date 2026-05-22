@@ -116,7 +116,7 @@ patientRouter.post(
 patientRouter.get(
   '/',
   authMiddleware,
-  requireRole(['admin', 'receptionist']),
+  requireRole(['admin', 'doctor', 'receptionist', 'lab_technician']),
   patientController.list,
 );
 
@@ -149,7 +149,7 @@ patientRouter.get(
 patientRouter.get(
   '/:id',
   authMiddleware,
-  requireRole(['admin', 'receptionist']),
+  requireRole(['admin', 'doctor', 'receptionist', 'lab_technician']),
   patientController.getById,
 );
 

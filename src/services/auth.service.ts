@@ -67,8 +67,8 @@ export class AuthService {
     }
 
     const tokenPayload = { id: user.id, email: user.email, role: user.role };
-    const accessToken = generateToken(tokenPayload, 900); // 900 seconds
-    const refreshToken = generateToken(tokenPayload, 15 * 24 * 3600); // 15 days
+    const accessToken = generateToken({ ...tokenPayload, type: 'access' }, 900); // 900 seconds
+    const refreshToken = generateToken({ ...tokenPayload, type: 'refresh' }, 15 * 24 * 3600); // 15 days
 
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
     await this.userRepository.updateRefreshTokenHash(user.id, refreshTokenHash);
@@ -89,7 +89,7 @@ export class AuthService {
 
   public async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     const payload = verifyToken(refreshToken);
-    if (!payload) {
+    if (!payload || payload.type !== 'refresh') {
       throw new UnauthorizedError('Invalid or expired refresh token');
     }
 
@@ -108,8 +108,8 @@ export class AuthService {
     }
 
     const tokenPayload = { id: user.id, email: user.email, role: user.role };
-    const newAccessToken = generateToken(tokenPayload, 900);
-    const newRefreshToken = generateToken(tokenPayload, 15 * 24 * 3600);
+    const newAccessToken = generateToken({ ...tokenPayload, type: 'access' }, 900);
+    const newRefreshToken = generateToken({ ...tokenPayload, type: 'refresh' }, 15 * 24 * 3600);
 
     const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 10);
     await this.userRepository.updateRefreshTokenHash(user.id, newRefreshTokenHash);
