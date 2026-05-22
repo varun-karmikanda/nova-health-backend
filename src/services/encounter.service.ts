@@ -47,7 +47,7 @@ export class EncounterService {
       'CREATE',
       'Encounter',
       created.id,
-      createdBy !== 'system' ? undefined : undefined,
+      createdBy,
       undefined,
       null,
       created as unknown as Record<string, unknown>,
@@ -71,7 +71,7 @@ export class EncounterService {
   public async updateEncounter(
     id: string,
     input: UpdateEncounterInput,
-    _updatedBy: string, // currently unused for tracking due to no explicit field in entity, but good for audit
+    updatedBy: string,
   ): Promise<Encounter> {
     const existing = await this.encounterRepository.findById(id);
     if (!existing) {
@@ -94,7 +94,7 @@ export class EncounterService {
       'UPDATE',
       'Encounter',
       id,
-      undefined,
+      updatedBy,
       undefined,
       existing as unknown as Record<string, unknown>,
       updated as unknown as Record<string, unknown>,
@@ -104,7 +104,7 @@ export class EncounterService {
     return updated;
   }
 
-  public async removeEncounter(id: string): Promise<void> {
+  public async removeEncounter(id: string, removedBy: string): Promise<void> {
     const existing = await this.encounterRepository.findById(id);
     if (!existing) {
       throw new NotFoundError('Encounter', id);
@@ -115,7 +115,7 @@ export class EncounterService {
       'DELETE',
       'Encounter',
       id,
-      undefined,
+      removedBy,
       undefined,
       existing as unknown as Record<string, unknown>,
       null,

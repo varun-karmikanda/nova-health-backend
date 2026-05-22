@@ -69,7 +69,8 @@ export class EncounterController {
         });
         return;
       }
-      await this.encounterService.removeEncounter(id);
+      const removedBy = req.user?.email ?? 'system';
+      await this.encounterService.removeEncounter(id, removedBy);
       res.status(200).json({ success: true, message: 'Encounter deleted successfully' });
     } catch (err) {
       next(err);

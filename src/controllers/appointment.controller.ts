@@ -95,7 +95,8 @@ export class AppointmentController {
         });
         return;
       }
-      await this.appointmentService.cancelAppointment(id);
+      const cancelledBy = req.user?.email ?? 'system';
+      await this.appointmentService.cancelAppointment(id, cancelledBy);
       res.status(200).json({
         success: true,
         message: 'Appointment cancelled successfully',

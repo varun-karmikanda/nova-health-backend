@@ -69,7 +69,8 @@ export class PatientController {
         });
         return;
       }
-      await this.patientService.removePatient(id);
+      const removedBy = req.user?.email ?? 'system';
+      await this.patientService.removePatient(id, removedBy);
       res.status(200).json({ success: true, message: 'Patient deleted successfully' });
     } catch (err) {
       next(err);

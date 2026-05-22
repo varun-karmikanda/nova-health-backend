@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
 import { UserRole } from '../models/auth.dto';
+import { verifyToken } from '../utils/token.utils';
 
 declare global {
   namespace Express {
@@ -32,28 +33,20 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     return;
   }
 
-  try {
-    const decoded = Buffer.from(token, 'base64').toString('utf-8');
-    const payload = JSON.parse(decoded) as {
-      id: string;
-      email: string;
-      role: UserRole;
-    };
-
-    if (!payload.id || !payload.email || !payload.role) {
-      res.status(401).json({
-        error: { code: 'UNAUTHORIZED', message: 'Invalid authentication token structure' },
-      });
-      return;
-    }
-
-    req.user = payload;
-    next();
-  } catch (_err) {
+  const payload = verifyToken(token);
+  if (!payload) {
     res.status(401).json({
-      error: { code: 'UNAUTHORIZED', message: 'Invalid authentication token' },
+      error: { code: 'UNAUTHORIZED', message: 'Invalid or expired authentication token' },
     });
+    return;
   }
+
+  req.user = {
+    id: payload.id,
+    email: payload.email,
+    role: payload.role,
+  };
+  next();
 }
 
 export function requireRole(allowedRoles: UserRole[]) {

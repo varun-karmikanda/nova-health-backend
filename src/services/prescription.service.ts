@@ -46,7 +46,7 @@ export class PrescriptionService {
       'CREATE',
       'Prescription',
       created.id,
-      createdBy !== 'system' ? undefined : undefined,
+      createdBy,
       undefined,
       null,
       created as unknown as Record<string, unknown>,
@@ -70,7 +70,7 @@ export class PrescriptionService {
   public async updatePrescription(
     id: string,
     input: UpdatePrescriptionInput,
-    _updatedBy: string,
+    updatedBy: string,
   ): Promise<Prescription> {
     const existing = await this.prescriptionRepository.findById(id);
     if (!existing) {
@@ -97,7 +97,7 @@ export class PrescriptionService {
       'UPDATE',
       'Prescription',
       id,
-      undefined,
+      updatedBy,
       undefined,
       existing as unknown as Record<string, unknown>,
       updated as unknown as Record<string, unknown>,
@@ -107,7 +107,7 @@ export class PrescriptionService {
     return updated;
   }
 
-  public async removePrescription(id: string): Promise<void> {
+  public async removePrescription(id: string, removedBy: string): Promise<void> {
     const existing = await this.prescriptionRepository.findById(id);
     if (!existing) {
       throw new NotFoundError('Prescription', id);
@@ -118,7 +118,7 @@ export class PrescriptionService {
       'DELETE',
       'Prescription',
       id,
-      undefined,
+      removedBy,
       undefined,
       existing as unknown as Record<string, unknown>,
       null,

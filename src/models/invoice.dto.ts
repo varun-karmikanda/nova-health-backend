@@ -27,6 +27,10 @@ export type CreateInvoiceInput = z.infer<typeof CreateInvoiceSchema>;
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 export const UpdateInvoiceSchema = z.object({
+  patient_id: z.string().uuid().optional(),
+  appointment_id: z.string().uuid().optional(),
+  total_amount: z.number().min(0).optional(),
+  tax_amount: z.number().min(0).optional(),
   status: z.enum(INVOICE_STATUSES).optional(),
   paid_amount: z.number().min(0).optional(),
   due_date: z

@@ -48,5 +48,6 @@ export interface User {
 
 export interface SignInResponse {
   accessToken: string;
+  refreshToken: string;
   userId: string;
 }

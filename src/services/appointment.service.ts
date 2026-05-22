@@ -12,6 +12,38 @@ import { NotFoundError, ValidationError } from '../utils/errors';
 
 import { AuditService } from './audit.service';
 
+class SequencerLock {
+  private static queues = new Map<string, Promise<unknown>>();
+
+  public static async acquire<T>(dateStr: string, fn: () => Promise<T>): Promise<T> {
+    const currentQueue = this.queues.get(dateStr) ?? Promise.resolve();
+    const nextQueue = currentQueue.then(() => fn());
+    this.queues.set(dateStr, nextQueue.catch(() => {}));
+    return nextQueue;
+  }
+}
+
+function getLocalDateString(isoString: string): string {
+  const d = new Date(isoString);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function lockDates<T>(dateA: string, dateB: string, fn: () => Promise<T>): Promise<T> {
+  if (dateA === dateB) {
+    return SequencerLock.acquire(dateA, fn);
+  }
+  const sorted = [dateA, dateB].sort();
+  const date0 = sorted[0];
+  const date1 = sorted[1];
+  if (!date0 || !date1) {
+    return fn();
+  }
+  return SequencerLock.acquire(date0, () => SequencerLock.acquire(date1, fn));
+}
+
 export class AppointmentService {
   private appointmentRepository = new AppointmentRepository();
 
@@ -43,37 +75,50 @@ export class AppointmentService {
       );
     }
 
-    const now = new Date().toISOString();
-    const tokenNumber = await this.appointmentRepository.nextTokenNumber();
+    const scheduledDateStr = getLocalDateString(input.scheduled_at);
 
-    const newAppointment: Appointment = {
-      id: randomUUID(),
-      patient_id: input.patient_id,
-      doctor_id: input.doctor_id,
-      scheduled_at: new Date(input.scheduled_at).toISOString(),
-      token_number: tokenNumber,
-      status: 'pending',
-      reason: input.reason,
-      created_by: createdBy,
-      updated_by: createdBy,
-      created_at: now,
-      updated_at: now,
-      is_deleted: false,
-    };
+    return SequencerLock.acquire(scheduledDateStr, async () => {
+      const now = new Date().toISOString();
+      const tokenNumber = await this.appointmentRepository.nextTokenNumber(scheduledDateStr);
 
-    const created = await this.appointmentRepository.create(newAppointment);
+      const newAppointment: Appointment = {
+        id: randomUUID(),
+        patient_id: input.patient_id,
+        doctor_id: input.doctor_id,
+        scheduled_at: new Date(input.scheduled_at).toISOString(),
+        token_number: tokenNumber,
+        status: 'pending',
+        reason: input.reason,
+        created_by: createdBy,
+        updated_by: createdBy,
+        created_at: now,
+        updated_at: now,
+        is_deleted: false,
+      };
 
-    await this.auditService.logAction(
-      'CREATE',
-      'Appointment',
-      created.id,
-      createdBy !== 'system' ? undefined : undefined,
-      undefined,
-      null,
-      created as unknown as Record<string, unknown>,
-    );
+      const created = await this.appointmentRepository.create(newAppointment);
 
-    return created;
+      // Resequence the queue chronologically to assign final tokens starting at 1
+      await this.appointmentRepository.resequenceTokensForDay(scheduledDateStr);
+
+      // Fetch the updated appointment
+      const finalAppointment = await this.appointmentRepository.findById(created.id);
+      if (!finalAppointment) {
+        throw new NotFoundError('Appointment', created.id);
+      }
+
+      await this.auditService.logAction(
+        'CREATE',
+        'Appointment',
+        finalAppointment.id,
+        createdBy,
+        undefined,
+        null,
+        finalAppointment as unknown as Record<string, unknown>,
+      );
+
+      return finalAppointment;
+    });
   }
 
   public async listAppointments(): Promise<Appointment[]> {
@@ -98,45 +143,70 @@ export class AppointmentService {
       throw new NotFoundError('Appointment', id);
     }
 
-    const updates: Record<string, unknown> = { updated_by: updatedBy };
-    Object.entries(input).forEach(([key, value]) => {
-      if (value !== undefined) {
-        updates[key] = value;
+    const oldDateStr = getLocalDateString(existing.scheduled_at);
+    const newDateStr = input.scheduled_at ? getLocalDateString(input.scheduled_at) : oldDateStr;
+
+    return lockDates(oldDateStr, newDateStr, async () => {
+      const updates: Record<string, unknown> = { updated_by: updatedBy };
+      Object.entries(input).forEach(([key, value]) => {
+        if (value !== undefined) {
+          updates[key] = value;
+        }
+      });
+
+      if (input.scheduled_at) {
+        updates.scheduled_at = new Date(input.scheduled_at).toISOString();
       }
+
+      const updated = await this.appointmentRepository.update(id, updates);
+      if (!updated) {
+        throw new NotFoundError('Appointment', id);
+      }
+
+      // Resequence the day(s)
+      await this.appointmentRepository.resequenceTokensForDay(oldDateStr);
+      if (oldDateStr !== newDateStr) {
+        await this.appointmentRepository.resequenceTokensForDay(newDateStr);
+      }
+
+      // Fetch the finalized appointment
+      const finalAppointment = await this.appointmentRepository.findById(id);
+      if (!finalAppointment) {
+        throw new NotFoundError('Appointment', id);
+      }
+
+      await this.auditService.logAction(
+        'UPDATE',
+        'Appointment',
+        id,
+        updatedBy,
+        undefined,
+        existing as unknown as Record<string, unknown>,
+        finalAppointment as unknown as Record<string, unknown>,
+        updates,
+      );
+
+      return finalAppointment;
     });
-
-    const updated = await this.appointmentRepository.update(id, updates);
-
-    if (!updated) {
-      throw new NotFoundError('Appointment', id);
-    }
-
-    await this.auditService.logAction(
-      'UPDATE',
-      'Appointment',
-      id,
-      undefined,
-      undefined,
-      existing as unknown as Record<string, unknown>,
-      updated as unknown as Record<string, unknown>,
-      updates,
-    );
-
-    return updated;
   }
 
-  public async cancelAppointment(id: string): Promise<void> {
+  public async cancelAppointment(id: string, cancelledBy: string): Promise<void> {
     const existing = await this.appointmentRepository.findById(id);
     if (!existing) {
       throw new NotFoundError('Appointment', id);
     }
-    await this.appointmentRepository.softDelete(id);
+    const dateStr = getLocalDateString(existing.scheduled_at);
+
+    await SequencerLock.acquire(dateStr, async () => {
+      await this.appointmentRepository.softDelete(id);
+      await this.appointmentRepository.resequenceTokensForDay(dateStr);
+    });
 
     await this.auditService.logAction(
       'DELETE',
       'Appointment',
       id,
-      undefined,
+      cancelledBy,
       undefined,
       existing as unknown as Record<string, unknown>,
       null,

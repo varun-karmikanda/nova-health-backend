@@ -1,4 +1,5 @@
 import { Schema, model } from 'mongoose';
+
 import { AuditAction } from './audit.dto';
 
 // --- AuditLog Schema ---
@@ -8,6 +9,7 @@ export interface AuditLogDoc {
   entity_id?: string;
   action: AuditAction;
   user_id?: string;
+  user_name?: string;
   timestamp: string;
   source_ip?: string;
   changes?: Record<string, unknown>;
@@ -20,11 +22,12 @@ const AuditLogSchema = new Schema<AuditLogDoc>(
     entity_id: { type: String },
     action: { type: String, enum: ['CREATE', 'UPDATE', 'DELETE', 'VIEW', 'LOGIN', 'ASSIGN_ROLE'], required: true },
     user_id: { type: String },
+    user_name: { type: String },
     timestamp: { type: String, required: true },
     source_ip: { type: String },
     changes: { type: Schema.Types.Mixed },
   },
-  { collection: 'audit_logs', _id: false }
+  { collection: 'audit_logs', _id: false },
 );
 
 export const AuditLogModel = model<AuditLogDoc>('AuditLog', AuditLogSchema);
@@ -44,7 +47,7 @@ const AuditSnapshotSchema = new Schema<AuditSnapshotDoc>(
     before_data: { type: Schema.Types.Mixed, default: null },
     after_data: { type: Schema.Types.Mixed, default: null },
   },
-  { collection: 'audit_snapshots', _id: false }
+  { collection: 'audit_snapshots', _id: false },
 );
 
 export const AuditSnapshotModel = model<AuditSnapshotDoc>('AuditSnapshot', AuditSnapshotSchema);

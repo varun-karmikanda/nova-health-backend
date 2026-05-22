@@ -33,6 +33,25 @@ export class AuthController {
     }
   };
 
+  public refresh = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        res.status(400).json({
+          error: { code: 'BAD_REQUEST', message: 'Refresh token is required' },
+        });
+        return;
+      }
+      const data = await this.authService.refresh(refreshToken);
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public me = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user?.id;
@@ -64,13 +83,11 @@ export class AuthController {
     }
   };
 
-  public listUsers = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public listUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const users = await this.authService.getAllUsers();
-      res.status(200).json({
-        success: true,
-        data: users,
-      });
+      const includeDeactivated = req.query.include_deactivated === 'true';
+      const users = await this.authService.getAllUsers(includeDeactivated);
+      res.status(200).json({ success: true, data: users });
     } catch (err) {
       next(err);
     }
