@@ -56,7 +56,7 @@ export class PatientService {
       'CREATE',
       'Patient',
       created.id,
-      createdBy !== 'system' ? undefined : undefined, // We don't have user id here easily, but let's pass undefined
+      createdBy,
       undefined,
       null,
       created as unknown as Record<string, unknown>,
@@ -87,14 +87,14 @@ export class PatientService {
       throw new NotFoundError('Patient', id);
     }
 
-    const updatedFirstName = input.first_name !== undefined ? input.first_name : existing.first_name;
-    const updatedLastName = input.last_name !== undefined ? input.last_name : existing.last_name;
-    const updatedPhone = input.phone !== undefined ? input.phone : existing.phone;
+    const updatedFirstName = input.first_name ?? existing.first_name;
+    const updatedLastName = input.last_name ?? existing.last_name;
+    const updatedPhone = input.phone ?? existing.phone;
 
     if (
-      input.first_name !== undefined ||
-      input.last_name !== undefined ||
-      input.phone !== undefined
+      input.first_name !== undefined
+      || input.last_name !== undefined
+      || input.phone !== undefined
     ) {
       const duplicate = await this.patientRepository.findByNameAndPhone(
         updatedFirstName,
@@ -126,7 +126,7 @@ export class PatientService {
       'UPDATE',
       'Patient',
       id,
-      undefined,
+      updatedBy,
       undefined,
       existing as unknown as Record<string, unknown>,
       updated as unknown as Record<string, unknown>,
@@ -136,7 +136,7 @@ export class PatientService {
     return updated;
   }
 
-  public async removePatient(id: string): Promise<void> {
+  public async removePatient(id: string, removedBy: string): Promise<void> {
     const existing = await this.patientRepository.findById(id);
     if (!existing) {
       throw new NotFoundError('Patient', id);
@@ -147,7 +147,7 @@ export class PatientService {
       'DELETE',
       'Patient',
       id,
-      undefined,
+      removedBy,
       undefined,
       existing as unknown as Record<string, unknown>,
       null,

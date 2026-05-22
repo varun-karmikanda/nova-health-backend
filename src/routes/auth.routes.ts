@@ -122,6 +122,34 @@ authRouter.post('/login', authController.login);
 
 /**
  * @openapi
+ * /auth/refresh:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Refresh access token
+ *     description: Rotate access token using a valid refresh token.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Rotation successful
+ *       400:
+ *         description: Refresh token required
+ *       401:
+ *         description: Invalid or expired refresh token
+ */
+authRouter.post('/refresh', authController.refresh);
+
+/**
+ * @openapi
  * /auth/me:
  *   get:
  *     tags: [Auth]

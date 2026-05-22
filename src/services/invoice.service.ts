@@ -52,7 +52,7 @@ export class InvoiceService {
       'CREATE',
       'Invoice',
       created.id,
-      createdBy !== 'system' ? undefined : undefined,
+      createdBy,
       undefined,
       null,
       created as unknown as Record<string, unknown>,
@@ -76,7 +76,7 @@ export class InvoiceService {
   public async updateInvoice(
     id: string,
     input: UpdateInvoiceInput,
-    _updatedBy: string,
+    updatedBy: string,
   ): Promise<Invoice> {
     const existing = await this.invoiceRepository.findById(id);
     if (!existing) {
@@ -99,7 +99,7 @@ export class InvoiceService {
       'UPDATE',
       'Invoice',
       id,
-      undefined,
+      updatedBy,
       undefined,
       existing as unknown as Record<string, unknown>,
       updated as unknown as Record<string, unknown>,
@@ -109,7 +109,7 @@ export class InvoiceService {
     return updated;
   }
 
-  public async removeInvoice(id: string): Promise<void> {
+  public async removeInvoice(id: string, removedBy: string): Promise<void> {
     const existing = await this.invoiceRepository.findById(id);
     if (!existing) {
       throw new NotFoundError('Invoice', id);
@@ -120,7 +120,7 @@ export class InvoiceService {
       'DELETE',
       'Invoice',
       id,
-      undefined,
+      removedBy,
       undefined,
       existing as unknown as Record<string, unknown>,
       null,

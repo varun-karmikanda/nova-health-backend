@@ -16,7 +16,8 @@ export const AuditLogSchema = z.object({
   entity_type: z.string(),
   entity_id: z.string().uuid().optional(),
   action: z.enum(AUDIT_ACTIONS),
-  user_id: z.string().uuid().optional(),
+  user_id: z.string().optional(),
+  user_name: z.string().optional(),
   timestamp: z.string(),
   source_ip: z.string().optional(),
   changes: z.record(z.unknown()).optional(), // Store unstructured change diff if needed

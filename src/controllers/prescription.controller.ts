@@ -69,7 +69,8 @@ export class PrescriptionController {
         });
         return;
       }
-      await this.prescriptionService.removePrescription(id);
+      const removedBy = req.user?.email ?? 'system';
+      await this.prescriptionService.removePrescription(id, removedBy);
       res.status(200).json({ success: true, message: 'Prescription deleted successfully' });
     } catch (err) {
       next(err);

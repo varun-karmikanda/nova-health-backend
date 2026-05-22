@@ -69,7 +69,8 @@ export class InvoiceController {
         });
         return;
       }
-      await this.invoiceService.removeInvoice(id);
+      const removedBy = req.user?.email ?? 'system';
+      await this.invoiceService.removeInvoice(id, removedBy);
       res.status(200).json({ success: true, message: 'Invoice deleted successfully' });
     } catch (err) {
       next(err);

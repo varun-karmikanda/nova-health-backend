@@ -1,14 +1,17 @@
+/* eslint-disable */
 import 'dotenv/config';
 import { connectDB } from '../config/db';
 import { UserModel } from '../models/user.schema';
 import { randomUUID } from 'node:crypto';
+
+import bcrypt from 'bcryptjs';
 
 const seed = async () => {
   await connectDB();
   const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@nova-health.com';
   const adminPassword = process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
   const existing = await UserModel.findOne({ email: adminEmail });
-  const hash = `hash_${adminPassword}`;
+  const hash = bcrypt.hashSync(adminPassword, 10);
   const now = new Date().toISOString();
   if (!existing) {
     await UserModel.create({
@@ -28,7 +31,7 @@ const seed = async () => {
   } else {
     existing.password_hash = hash;
     await existing.save();
-    console.info('✅ Admin user password hash updated to mock format');
+    console.info('✅ Admin user password hash updated to bcrypt format');
   }
   process.exit(0);
 };
